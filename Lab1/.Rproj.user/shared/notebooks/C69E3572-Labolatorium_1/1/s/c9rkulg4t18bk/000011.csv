@@ -1,3 +1,0 @@
-"0","Auto <- read.csv('Auto.csv', header = TRUE, na.strings = '?')"
-"0",""
-"0","head(Auto)"
