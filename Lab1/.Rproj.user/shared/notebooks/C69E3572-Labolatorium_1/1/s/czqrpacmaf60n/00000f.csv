@@ -1,0 +1,16 @@
+"0","Auto <- na.omit(Auto)"
+"0","attach(Auto)"
+"2","Następujące obiekty zostały zakryte z Auto (pos = 3):
+
+    acceleration, cylinders,
+    displacement, horsepower, mpg,
+    name, origin, weight, year
+
+"
+"2","Następujące obiekty zostały zakryte z Auto (pos = 4):
+
+    acceleration, cylinders,
+    displacement, horsepower, mpg,
+    name, origin, weight, year
+
+"

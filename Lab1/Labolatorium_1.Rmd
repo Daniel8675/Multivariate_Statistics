@@ -1,0 +1,99 @@
+---
+title: "Labolatorium 1"
+author: "Daniel Kuc"
+date: "2023-05-04"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Wczytanie danych
+
+Analiza będzie oparta na zbiorze danych: `Auto`
+
+```{r}
+Auto <- read.csv('Auto.csv', header = TRUE, na.strings = '?')
+
+head(Auto)
+```
+
+```{r}
+Auto <- na.omit(Auto)
+attach(Auto)
+```
+
+# Analiza danych
+
+*1.* Jakie jest średnie zużycie paliwa (mpg) wszystkich samochodów?
+
+```{r}
+mean(mpg)
+```
+
+*2.* Jakie jest średnie zużycie paliwa samochodów, które mają 4 cylindry?
+
+```{r}
+mean(Auto$mpg[cylinders == 4])
+```
+
+*3.* Jaka jest mediana wagi (weight) wszystkich samochodów?
+
+```{r}
+median(Auto$weight)
+```
+
+*4.* Jakie jest średnie zużycie paliwa samochodów wyprodukowanych w roku 72?
+
+```{r}
+mean(Auto$mpg[year == 72])
+```
+
+*5.* Jaka jest wariancja przyspieszenia (acceleration) wszystkich samochodów?
+
+```{r}
+var(Auto$acceleration)
+```
+
+*6.* Jaka jest wariancja przyspieszenia samochodów japońskich (origin == 3)?
+
+```{r}
+var(Auto$acceleration[origin == 3])
+```
+
+*7.* Ile jest samochodów, których moc (horsepower) jest powyżej średniej?
+
+```{r}
+sum(horsepower > mean(horsepower))
+```
+
+*8.* Jaka jest maksymalna moc samochodów, których waga jest poniżej średniej?
+
+```{r}
+max(Auto$horsepower[weight < mean(weight)])
+```
+
+*9.* Ile jest samochodów, których zużycie paliwa jest poniżej średniej (czyli mpg jest powyżej średniej)?
+
+```{r}
+sum(mpg > mean(mpg))
+```
+
+*10.* Jaka jest minimalna liczba cylindrów samochodów, których zużycie paliwa jest poniżej średniej?
+
+```{r}
+min(Auto$cylinders[mpg > mean(mpg)])
+```
+
+*11.* Ile jest samochodów o maksymalnej pojemności silnika (displacement)?
+
+```{r}
+sum(displacement == max(displacement))
+```
+
+*12.* Jaka jest maksymalna waga (weight) samochodów, których pojemność silnika jest mniejsza od jej mediany?
+
+```{r}
+max(Auto$weight[displacement < median(displacement)])
+```
