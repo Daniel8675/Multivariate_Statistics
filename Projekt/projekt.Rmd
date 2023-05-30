@@ -1,0 +1,196 @@
+---
+title: "Projekt"
+author: "Daniel Kuc, Filip Ręka"
+date: '2023'
+output: html_document
+---
+
+## Projekt ma na celu zbadanie istotności wpływu określonych współczynników na migracje w Stanach Zjednoczonych.
+
+### Wczytanie Danych
+
+```{r DataSet}
+DataSet <- read.csv('better.csv', header = TRUE, sep = ";")
+```
+
+Dokonamy losowego wyboru `0 próbek na rzecz predykcji.
+Zaczniemy od dołączenia potrzebnego pakietu `dplyr`.
+```{r dplyr library}
+library(dplyr)
+```
+Wybór 10 losowych wierszy
+```{r Radom ten rows}
+random_samples <- DataSet %>% sample_n(10)
+```
+
+```{r}
+test_data <- random_samples[1:10, 5:69]
+```
+
+Usuwanie wybranych próbek z głównego dataframe`u
+```{r Train DataSet}
+Migration <- DataSet %>% anti_join(random_samples)
+Migration <- Migration[, 5:69]
+```
+
+```{r DataSet Dim}
+dim(Migration)
+```
+
+
+Zbiór danych uczących ma około 70 kolumn oraz ponad 2700 wierszy.
+
+### Regresja Wielokrotna
+
+Zaczniemy od prostego modelu `regresji wielokrotnej`, gdzie model prezentuje się następująco:
+
+$$
+Y = \beta_{0} + \beta_{1}X_{1} + \beta_{2}X_{2} + \dots + \beta_{64}X_{64} + \epsilon 
+$$
+
+```{r Regression}
+fit_all <-  lm(NPOPCHG2022 ~ ., data = Migration)
+```
+
+
+Podejrzymy wyniki za pomocą funkcji `summary`.
+
+```{r Regression Summary}
+summary(fit_all)
+```
+Sekcja `Residuals` w wynikach modelu podaje podsumowanie w postaci 5 punktów(tj. min, 1-kwantyl, mediana, 3-kwantyl, max). Podczas oceny dopasowania modelu do danych należy szukać symetrycznego rozkładu tych punktów wokół wartości średniej równej zero. W naszym przykładzie możemy zauważyć, że rozkład reziduów wydaje się być symetryczny z średnią około zera lecz z dużymi wartościami min jak i max.
+
+Kolejna sekcja `Coefficients` odnosi się do współczynników modelu. Teoretycznie, w prostym modelu regresji liniowej współczynniki to dwie nieznane stałe, które reprezentują wyraz wolny i współczynnik nachylenia w modelu liniowym. 
+
+
+`Coefficient - Estimate` zawiera wartości: pierwsza z nich to wyraz wolny. Kolejne wiersze to estymowane współczynnik nachylenia. Współczynnik nachylenia w modelu mówi, że dla każdego wzrostu danej cechy np. `Employed_2020`, liczba osób migrujących wzrasta o około 5.650e-01. 
+
+
+`Coefficient - Standard Error` mierzy średnią wartość, o jaką estymaty współczynników różnią się od rzeczywistej średniej wartości zmiennej odpowiedzi. W idealnej sytuacji wartość ta powinna być niższa względem swoich współczynników. Błąd standardowy można użyć do obliczenia szacunkowej różnicy oczekiwanej w przypadku wielokrotnego uruchomienia modelu. Błędy standardowe mogą również być używane do obliczenia przedziałów ufności.
+
+
+`Coefficient - t value` jest miarą, o ile nasza estymata współczynnika różni się od zera, wyrażona w jednostkach odchylenia standardowego. Chcemy, aby była znacznie różna od zera, ponieważ wskazywałoby to, że możemy odrzucić hipotezę zerową - czyli stwierdzić istnienie związku między daną cechą a migracją. Ogólnie rzecz biorąc, wartości t są również używane do obliczania wartości p.
+
+
+`Coefficient - Pr(>t)`, odnosi się do prawdopodobieństwa obserwacji dowolnej wartości równej lub większej od t. Mała wartość p wskazuje na prawdopodobne wystąpienie związku między zmienną predykcyjną a zmienną odpowiedzi. Zwykle wartość p równa lub mniejsza niż 5% jest dobrym punktem odcięcia. W naszym przykładzie modelu, wartości p są bardzo bliskie zeru dla takich cech jak:
+
+* X2020 Real GDP thousands of chained 2012 dollars.
+* X2020 Chain type quantity indexes for real GDP.
+* Air pollution particulate matter raw value 2020.
+* X2020 Personal income thousands of dollars.
+* X2020 Population persons 1.
+* Civilian_labor_force_2020
+* Employed_2020
+* Unemployment_rate_2020
+
+Dla każdej z powższej zmiennej p wartość należy do przedziału od 0 do 0.001, można też to zaobserwować przez *** stojące obok ostatniej kolumny w raporcie. Mniejsza liczba * a później . oznacza coraz większą wartośc p.
+
+
+`Residual standard error` jest miarą jakości dopasowania regresji liniowej. Teoretycznie zakłada się, że każdy model liniowy zawiera składnik błędu \espilon. Ze względu na obecność tego składnika błędu nie jesteśmy w stanie dokładnie przewidzieć zmiennej odpowiedzi na podstawie zmiennej predykcyjnej. Błąd standardowy reszt to średnia wartość, o jaką zmienna odpowiedzi odbiega od prawdziwej linii regresji. Warto zauważyć, że błąd standardowy reszt został obliczony przy 2651 stopniach swobody. W uproszczeniu, stopnie swobody to liczba punktów danych, która została uwzględniona przy estymacji użytych parametrów po uwzględnieniu tych ograniczeń.
+
+
+`Multiple R-squared` dostarcza miary, jak dobrze model dopasowuje się do rzeczywistych danych. Przyjmuje formę odsetka wariancji. R kwadrat jest miarą liniowego związku między zmienną predykcyjną a zmienną odpowiedzi. Zawsze mieści się w zakresie od 0 do 1 (np. liczba bliska 0 oznacza regresję, która słabo wyjaśnia wariancję w zmiennej odpowiedzi, a liczba bliska 1 wyjaśnia obserwowaną wariancję w zmiennej odpowiedzi). W naszym przykładzie otrzymujemy R kwadrat wynoszące około 0,4665. Innymi słowy, około 47% wariancji zmiennej odpowiedzi może być wyjaśnione przez zmienną predykcyjną.
+
+Dodatkowa uwaga: W przypadku regresji wielorakiej wskaźnik R kwadrat zawsze wzrośnie, gdy do modelu zostaną uwzględnione kolejne zmienne. Dlatego preferowaną miarą jest skorygowany współczynnik determinacji R kwadrat, który uwzględnia liczbę uwzględnianych zmiennych.
+
+
+`F-statistic` jest dobrym wskaźnikiem istnienia związku między zmiennymi predykcyjnymi a zmienną odpowiedzi. Im dalej statystyka F jest od wartości 1, tym lepiej. Jednak to, o ile większa musi być statystyka F, zależy zarówno od liczby punktów danych, jak i od liczby predyktorów. Ogólnie rzecz biorąc, gdy liczba punktów danych jest duża, wystarczające jest, żeby statystyka F była tylko nieco większa od 1, aby odrzucić hipotezę zerową (H0: Nie ma związku między zmiennymi a migracją). Odwrotnie jest w przypadku małej liczby punktów danych, gdzie wymagana jest duża statystyka F, aby móc stwierdzić, że może istnieć związek między zmiennymi predykcyjnymi a odpowiedzią.
+
+`Wykresy diagnostyczne`:
+```{r Regression diagnostic}
+plot(fit_all)
+```
+Identyfikacja obserwacji wpływowych (statystyka "dźwigni"):
+
+```{r Regression leverage}
+plot(hatvalues(fit_all))
+which.max(hatvalues(fit_all))
+```
+
+
+Przedziały ufności możemy zobaczyć za pomocą funkcji `confint`:
+
+```{r Regression Confint}
+confint(fit_all)
+```
+
+Funkcja `predict()` oblicza przedziału ufności dla predykcji - zarówno dla przewidywania średniej wartości:
+```{r Predict confidence}
+predict(fit_all, test_data[1:10,1:64], interval = "confidence")
+```
+jak i dla przewidywania przyszłej wartości
+```{r Regression Prediction}
+linear_pred <- predict(fit_all, test_data[1:10,1:64], interval = "prediction")
+linear_pred
+```
+
+Zobaczmy błąd dla przewidywanych wartości:
+```{r}
+diff_vector <- test_data$NPOPCHG2022 - linear_pred[, 1]
+diff_vector
+```
+
+### Regresja logistyczna
+
+Regresja logistyczna to metoda regresji używana w statystyce w przypadku, gdy zmienna zależna jest na skali dychotomicznej. Zmienne niezależne w analizie regresji logistycznej mogą przyjmować charakter nominalny lub porządkowy.
+
+Zwykle wartości zmiennej objaśnianej wskazują na wystąpienie, lub brak wystąpienia pewnego zdarzenia, które chcemy prognozować. Regresja logistyczna pozwala wówczas na obliczanie prawdopodobieństwa tego zdarzenia. Możemy to osiągnąć za pomocą funkcji logistycznej, która przekształca liczby rzeczywiste na przedział od 0 do 1, dana ona jest wzorem:
+$$
+f(x) = \frac{e^x}{1 + e^x}
+$$
+
+W przypadku danych `Migration` za pomocą regresji logistycznej można stwierdzić czy migracja będzie dodatnia tj. 1 bądź ujemna tj. 0. Na potrzeby takiej klasyfikacji stworzymy kolumne `Mig`, którą będziemy chcieli przewidywać.
+
+```{r Mig column}
+Migration$Mig <- ifelse(Migration$NPOPCHG2022 > 0, 1, 0)
+```
+
+Dopasowywujemy model regresji logistycznej za pomocą funkcji `glm`.
+
+```{r Logistic Regression}
+dir_logistic <- list()
+dir_logistic$fit <- glm(Mig ~ . - NPOPCHG2022, family = binomial, data = Migration)
+```
+
+Podsumowanie modelu za pomocą funkcji `summary`:
+
+```{r Logistic Regression Summary}
+summary(dir_logistic$fit)
+```
+Pierwszą zmianę jaką możemy zaobserwować jest taka, że nie mamy już kolumny t value ani też Pr(>t) tylko z value oraz Pr(>|z|)  jednak interpretacja tych zmiennych co do ideii jest bardzo podobna.
+
+`Null deviance` odnosi się do wartości dewiancji osiągniętej przez model, w którym nie uwzględnia się żadnych predyktorów, a jedynie stałą.
+Jest to miara, która informuje o odchyleniu danych od modelu zerowego, czyli modelu, który nie wykorzystuje żadnej informacji z predyktorów i po prostu przewiduje jedną wartość dla wszystkich obserwacji. Im większa wartość NULL Deviance, tym gorzej model zerowy dopasowuje się do danych.
+
+`Residual deviance` odnosi się do wartości dewiancji dla dopasowanego modelu regresji logistycznej z uwzględnieniem wszystkich predyktorów. Jest to miara, która informuje o odchyleniu danych od dopasowanego modelu. Im mniejsza wartość Residual Deviance, tym lepiej model dopasowuje się do danych.
+
+`AIC` jest miarą oceny jakości dopasowania modelu, która uwzględnia zarówno dopasowanie do danych, jak i złożoność modelu. Im niższa wartość AIC, tym lepiej model dopasowuje się do danych przy jednoczesnym minimalizowaniu złożoności modelu. AIC łączy w sobie informację o dopasowaniu modelu (Residual Deviance) i liczbie parametrów modelu, aby umożliwić porównywanie różnych modeli i wybieranie najlepszego spośród nich.
+
+`Number of Fisher Scoring iterations` - podczas estymacji parametrów w modelu regresji logistycznej, metoda Fisher Scoring wykorzystuje iteracyjny proces aktualizacji estymatorów w celu znalezienia wartości, które maksymalizują funkcję wiarygodności modelu. Iteracje są kontynuowane, aż osiągnięta zostanie zbieżność, czyli zmiany w estymatorach parametrów są wystarczająco małe, więc liczba iteracji Fisher Scoring informuje o tym, ile razy algorytm iteracyjny został wykonany, zanim została osiągnięta zbieżność i uzyskano ostateczne estymatory parametrów. Im większa liczba iteracji, tym bardziej skomplikowany lub trudny do dopasowania jest model.
+
+**Istotną różnicą jest fakt, że zależność pomiędzy zmienną zależną a niezależną już nie jest liniowa. Nie możemy, więc powiedzieć, że wzrost czynnika o 5 jednostek, powoduje wzrost zmiennej objaśniej o taką samą liczbę jednostek. Spowodowane jest to funkcją logistyczną, która jest funkcją nieliniową ale rosnącą. Możemy, więc wraz ze wsrotem czynnika mówić o wzroście prawdopodobieństwa przynależności do danej klasy zmiennej objaśnianej**
+
+Do predykcji również używana jest funkcja `predict()`. Przy wartości parametru `type = "response"` funkcja zwraca przewidywane prawdopodobieństwa $ P(Y = 1|X)$.
+
+```{r Logistic Regression Predict}
+dir_logistic$probs <- predict(dir_logistic$fit, test_data, type = "response")
+head(dir_logistic$probs)
+```
+Ostatecznie przewidywane przypisanie do klas uzyskujemy stosując bayesowską regułę decyzyjną.
+```{r Bayes}
+dir_logistic$predicted <- ifelse(dir_logistic$probs > 0.5, 1, 0)
+```
+Do zobrazowania wyników klasyfikacji używamy `confusion matrix`.
+
+```{r Confusion Matrix}
+test_data$Mig <- ifelse(test_data$NPOPCHG2022 > 0, 1, 0)
+
+dir_logistic$cm <- table(dir_logistic$predicted, test_data$Mig)
+dir_logistic$cm
+```
+
+
+Proporcję błędów można policzyć np. za pomocą średniej.
+```{r Mistakes}
+mean(dir_logistic$predicted != test_data$Mig)
+```
